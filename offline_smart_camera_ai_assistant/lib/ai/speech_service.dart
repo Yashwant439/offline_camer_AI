@@ -10,7 +10,7 @@ class SpeechService {
   SpeechService(this._runAnywhereService);
 
   final RunAnywhereService _runAnywhereService;
-  final Record _record = Record();
+  final AudioRecorder _record = AudioRecorder();
   final FlutterTts _tts = FlutterTts();
 
   bool autoSpeak = true;

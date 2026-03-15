@@ -14,6 +14,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   String _status = 'Initializing on-device AI...';
   String? _error;
+  bool _downloading = false;
 
   @override
   void initState() {
@@ -32,6 +33,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         _error = error.toString();
         _status = 'Offline mode ready, but models are not downloaded.';
       });
+    }
+  }
+
+  Future<void> _downloadModels() async {
+    setState(() {
+      _downloading = true;
+      _status = 'Downloading models...';
+      _error = null;
+    });
+
+    try {
+      await ref.read(runAnywhereServiceProvider).ensureModelsReady();
+      await ref.read(speechServiceProvider).init();
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } catch (error) {
+      setState(() {
+        _error = error.toString();
+        _status = 'Download failed. Tap retry to try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloading = false;
+        });
+      }
     }
   }
 
@@ -78,12 +105,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, AppRoutes.home);
-                  },
-                  child: const Text('Continue Offline'),
-                ),
+                if (_downloading)
+                  const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                if (!_downloading) ...[
+                  ElevatedButton(
+                    onPressed: _downloadModels,
+                    child: const Text('Download Models'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, AppRoutes.home);
+                    },
+                    child: const Text('Continue Offline'),
+                  ),
+                ],
               ],
             ],
           ),

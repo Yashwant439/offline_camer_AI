@@ -67,8 +67,9 @@ class RunAnywhereService {
       memoryRequirement: llmModel.memoryRequirement ?? 760,
     );
     Onnx.addModel(
-      sttModel.id,
-      sttModel.url,
+      id: sttModel.id,
+      name: sttModel.name,
+      url: sttModel.url,
       modality: sttModel.modality ?? ModelCategory.speechRecognition,
     );
     _modelsRegistered = true;
@@ -77,10 +78,46 @@ class RunAnywhereService {
   Future<void> ensureModelsReady() async {
     await _verifyLocalModelIfConfigured(llmModel);
     await _verifyLocalModelIfConfigured(sttModel);
-    await for (final _ in RunAnywhere.downloadModel(llmModel.id)) {}
-    await RunAnywhere.loadModel(llmModel.id);
-    await for (final _ in RunAnywhere.downloadModel(sttModel.id)) {}
-    await RunAnywhere.loadModel(sttModel.id);
+
+    // Download + load both models. If a download fails, we rethrow with details.
+    await _downloadAndLoadModel(llmModel);
+    await _downloadAndLoadModel(sttModel);
+  }
+
+  Future<void> _downloadAndLoadModel(ModelConfig config) async {
+    try {
+      await for (final progress in RunAnywhere.downloadModel(config.id)) {
+        if (progress.state == DownloadProgressState.failed) {
+          throw Exception(
+              'Download failed for model ${config.id} (url: ${config.url}).');
+        }
+      }
+
+      await RunAnywhere.loadModel(config.id);
+    } catch (e) {
+      // Provide more context so it's easier to debug why downloads fail.
+      final localModels = await RunAnywhere.getDownloadedModelsWithInfo();
+      final downloadedIds = localModels.map((m) => m.modelInfo.id).toList();
+      throw Exception(
+        'Failed to download/load model ${config.id}. ' 
+        'URL: ${config.url}. ' 
+        'Downloaded models on device: $downloadedIds. ' 
+        'Original error: $e',
+      );
+    }
+  }
+
+  Future<T> _withModelDownloadedRetry<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on SDKError catch (e) {
+      if (e.type == SDKErrorType.modelNotDownloaded) {
+        // Try to download/load the model if it isn't available yet
+        await ensureModelsReady();
+        return await action();
+      }
+      rethrow;
+    }
   }
 
   Future<String> generateAnswer({
@@ -118,24 +155,28 @@ User: $question
 Assistant:
 ''';
 
-    final options = LLMGenerationOptions(
+    const options = LLMGenerationOptions(
       maxTokens: 240,
       temperature: 0.2,
       topP: 0.9,
       systemPrompt: systemPrompt,
     );
 
-    final stream = RunAnywhere.generateStream(prompt, options: options);
-    final buffer = StringBuffer();
-    await for (final token in stream) {
-      buffer.write(token);
-    }
-    return buffer.toString().trim();
+    return await _withModelDownloadedRetry(() async {
+      final result = await RunAnywhere.generateStream(prompt, options: options);
+      final buffer = StringBuffer();
+      await for (final token in result.stream) {
+        buffer.write(token);
+      }
+      return buffer.toString().trim();
+    });
   }
 
   Future<String> transcribe(Uint8List audioData) async {
-    final result = await RunAnywhere.transcribe(audioData);
-    return result.text.trim();
+    return await _withModelDownloadedRetry(() async {
+      final result = await RunAnywhere.transcribe(audioData);
+      return result.trim();
+    });
   }
 
   Future<void> _verifyLocalModelIfConfigured(ModelConfig config) async {
