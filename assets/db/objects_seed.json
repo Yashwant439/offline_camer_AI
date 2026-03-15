@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Mango",
+    "category": "Plant",
+    "description": "Tropical fruit tree with glossy leaves and sweet yellow-orange fruit.",
+    "nutrition": "Rich in vitamin C, vitamin A, and dietary fiber.",
+    "growth_tips": "Needs warm climate, full sun, and well-drained soil.",
+    "health_info": "Healthy trees show green leaves and steady new growth.",
+    "season": "Summer"
+  },
+  {
+    "name": "Pizza",
+    "category": "Food",
+    "description": "Baked flatbread topped with tomato sauce, cheese, and toppings.",
+    "nutrition": "Calories vary; cheese adds protein and fat, crust adds carbs.",
+    "growth_tips": "N/A",
+    "health_info": "Moderate portions are healthier; add vegetables for balance.",
+    "season": "All year"
+  },
+  {
+    "name": "Dog",
+    "category": "Animal",
+    "description": "Domesticated canine with diverse breeds and sizes.",
+    "nutrition": "N/A",
+    "growth_tips": "Provide regular exercise, fresh water, and balanced diet.",
+    "health_info": "Healthy dogs are alert, active, and have clear eyes.",
+    "season": "All year"
+  },
+  {
+    "name": "Laptop",
+    "category": "Product",
+    "description": "Portable computer with built-in screen, keyboard, and battery.",
+    "nutrition": "N/A",
+    "growth_tips": "N/A",
+    "health_info": "Keep vents clear and use on flat surfaces to avoid overheating.",
+    "season": "All year"
+  }
+]
